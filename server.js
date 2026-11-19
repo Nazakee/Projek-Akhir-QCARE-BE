@@ -27,30 +27,7 @@ app.get("/api/health", (req, res) => {
     });
 });
 
-app.get("/api/db-test", async (req, res) => {
-    try {
-        const { data, error } = await supabase
-            .from("fasilitas_kesehatan")
-            .select("id")
-            .limit(1);
 
-        if (error) {
-            throw error;
-        }
-
-        res.json({
-            status: "Connected",
-            message: "Supabase database connected successfully!"
-        });
-    } catch (error) {
-        console.error("Database error:", error.message);
-
-        res.status(500).json({
-            status: "Error",
-            message: "Failed to connect to Supabase database"
-        });
-    }
-});
 
 const fasilitasRoutes = require("./routes/fasilitasRoutes");
 app.use("/api/fasilitas", verifyToken, fasilitasRoutes);
