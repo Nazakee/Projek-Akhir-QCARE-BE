@@ -21,11 +21,17 @@ const getAllRiwayatAntrean = async (req, res) => {
 };
 
 // GET riwayat berdasarkan ID
+
 const getRiwayatAntreanById = async (req, res) => {
     try {
         const { data, error } = await supabase
             .from("riwayat_antrean")
-            .select("*")
+            .select(`
+                *,
+                antrean (
+                    pasien_id
+                )
+            `)
             .eq("id", req.params.id)
             .maybeSingle();
 
@@ -37,14 +43,29 @@ const getRiwayatAntreanById = async (req, res) => {
             });
         }
 
+        if (
+            req.admin.role === "pasien" &&
+            String(data.antrean?.pasien_id) !== String(req.admin.id)
+        ) {
+            return res.status(403).json({
+                message: "Akses ditolak. Kamu hanya dapat melihat riwayat antrean milik sendiri."
+            });
+        }
+
+        const { antrean, ...riwayat } = data;
+
         res.status(200).json({
             message: "Data riwayat antrean berhasil ditemukan",
-            data
+            data: riwayat
         });
+
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        res.status(500).json({
+            message: error.message
+        });
     }
 };
+
 
 // POST tambah riwayat antrean
 const createRiwayatAntrean = async (req, res) => {

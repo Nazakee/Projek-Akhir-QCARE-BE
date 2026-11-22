@@ -1,6 +1,7 @@
 
 const express = require("express");
 const router = express.Router();
+const authorizeRole = require("../middleware/roleMiddleware");
 
 const {
     getAllJadwalDokter,
@@ -12,8 +13,8 @@ const {
 
 router.get("/", getAllJadwalDokter);
 router.get("/:id", getJadwalDokterById);
-router.post("/", createJadwalDokter);
-router.put("/:id", updateJadwalDokter);
-router.delete("/:id", deleteJadwalDokter);
+router.post("/", authorizeRole("admin"), createJadwalDokter);
+router.put("/:id", authorizeRole("admin"), updateJadwalDokter);
+router.delete("/:id", authorizeRole("admin"), deleteJadwalDokter);
 
 module.exports = router;

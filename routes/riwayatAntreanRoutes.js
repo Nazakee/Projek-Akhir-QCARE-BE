@@ -1,6 +1,6 @@
-
 const express = require("express");
 const router = express.Router();
+const authorizeRole = require("../middleware/roleMiddleware");
 
 const {
     getAllRiwayatAntrean,
@@ -10,10 +10,11 @@ const {
     deleteRiwayatAntrean
 } = require("../controllers/riwayatAntreanController");
 
-router.get("/", getAllRiwayatAntrean);
+router.get("/", authorizeRole("admin"), getAllRiwayatAntrean);
 router.get("/:id", getRiwayatAntreanById);
-router.post("/", createRiwayatAntrean);
-router.put("/:id", updateRiwayatAntrean);
-router.delete("/:id", deleteRiwayatAntrean);
+
+router.post("/", authorizeRole("admin"), createRiwayatAntrean);
+router.put("/:id", authorizeRole("admin"), updateRiwayatAntrean);
+router.delete("/:id", authorizeRole("admin"), deleteRiwayatAntrean);
 
 module.exports = router;

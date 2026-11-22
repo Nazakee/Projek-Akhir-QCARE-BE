@@ -6,6 +6,7 @@ const express = require("express");
 const cors = require("cors");
 const supabase = require("./config/supabase");
 const verifyToken = require("./middleware/authMiddleware");
+const authorizeRole = require("./middleware/roleMiddleware");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -45,7 +46,7 @@ const jadwalDokterRoutes = require("./routes/jadwalDokterRoutes");
 app.use("/api/jadwal-dokter", verifyToken, jadwalDokterRoutes);
 
 const adminRoutes = require("./routes/adminRoutes");
-app.use("/api/admin", verifyToken, adminRoutes);
+app.use("/api/admin", verifyToken, authorizeRole("admin"), adminRoutes);
 
 const antreanRoutes = require("./routes/antreanRoutes");
 app.use("/api/antrean", verifyToken, antreanRoutes);
@@ -55,6 +56,12 @@ app.use("/api/riwayat-antrean", verifyToken, riwayatAntreanRoutes);
 
 const authRoutes = require("./routes/authRoutes");
 app.use("/api/auth", authRoutes);
+
+const pasienAuthRoutes = require("./routes/pasienAuthRoutes");
+app.use("/api/pasien-auth", pasienAuthRoutes);
+
+const passwordResetRoutes = require("./routes/passwordResetRoutes");
+app.use("/api/password-reset", passwordResetRoutes);
 
 app.listen(PORT, () => {
     console.log(`QCare API running at http://localhost:${PORT}`);

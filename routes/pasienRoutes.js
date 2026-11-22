@@ -1,6 +1,7 @@
 
 const express = require("express");
 const router = express.Router();
+const authorizeRole = require("../middleware/roleMiddleware");
 
 const {
     getAllPasien,
@@ -10,10 +11,13 @@ const {
     deletePasien
 } = require("../controllers/pasienController");
 
-router.get("/", getAllPasien);
+
+router.get("/", authorizeRole("admin"), getAllPasien);
 router.get("/:id", getPasienById);
-router.post("/", createPasien);
+
+router.post("/", authorizeRole("admin"), createPasien);
 router.put("/:id", updatePasien);
-router.delete("/:id", deletePasien);
+router.delete("/:id", authorizeRole("admin"), deletePasien);
+
 
 module.exports = router;

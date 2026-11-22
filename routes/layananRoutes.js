@@ -1,6 +1,7 @@
 
 const express = require("express");
 const router = express.Router();
+const authorizeRole = require("../middleware/roleMiddleware");
 
 const {
     getAllLayanan,
@@ -14,10 +15,10 @@ router.get("/", getAllLayanan);
 
 router.get("/:id", getLayananById);
 
-router.post("/", createLayanan);
+router.post("/", authorizeRole("admin"), createLayanan);
 
-router.put("/:id", updateLayanan);
+router.put("/:id", authorizeRole("admin"), updateLayanan);
 
-router.delete("/:id", deleteLayanan);
+router.delete("/:id", authorizeRole("admin"), deleteLayanan);
 
 module.exports = router;

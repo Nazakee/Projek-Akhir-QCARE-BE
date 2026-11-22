@@ -1,6 +1,7 @@
 
 const express = require("express");
 const router = express.Router();
+const authorizeRole = require("../middleware/roleMiddleware");
 
 const {
     getAllAntrean,
@@ -10,10 +11,10 @@ const {
     deleteAntrean
 } = require("../controllers/antreanController");
 
-router.get("/", getAllAntrean);
+router.get("/", authorizeRole("admin"), getAllAntrean);
 router.get("/:id", getAntreanById);
 router.post("/", createAntrean);
 router.put("/:id", updateAntrean);
-router.delete("/:id", deleteAntrean);
+router.delete("/:id", authorizeRole("admin"), deleteAntrean);
 
 module.exports = router;

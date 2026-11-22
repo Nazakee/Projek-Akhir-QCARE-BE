@@ -1,6 +1,7 @@
 
 const express = require("express");
 const router = express.Router();
+const authorizeRole = require("../middleware/roleMiddleware");
 
 const {
     getAllFasilitas,
@@ -10,19 +11,12 @@ const {
     deleteFasilitas
 } = require("../controllers/fasilitasController");
 
-// GET: Semua fasilitas
-router.get("/", getAllFasilitas);
 
-// GET: Fasilitas berdasarkan ID
+router.get("/", getAllFasilitas);
 router.get("/:id", getFasilitasById);
 
-// POST: Tambah fasilitas
-router.post("/", createFasilitas);
-
-// PUT: Update fasilitas
-router.put("/:id", updateFasilitas);
-
-// DELETE: Hapus fasilitas
-router.delete("/:id", deleteFasilitas);
+router.post("/", authorizeRole("admin"), createFasilitas);
+router.put("/:id", authorizeRole("admin"), updateFasilitas);
+router.delete("/:id", authorizeRole("admin"), deleteFasilitas);
 
 module.exports = router;

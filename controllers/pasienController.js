@@ -22,23 +22,42 @@ const getAllPasien = async (req, res) => {
     }
 };
 
+
 const getPasienById = async (req, res) => {
     try {
         const { id } = req.params;
 
+        if (
+            req.admin.role === "pasien" &&
+            String(req.admin.id) !== String(id)
+        ) {
+            return res.status(403).json({
+                message: "Akses ditolak. Kamu hanya dapat melihat data milik sendiri."
+            });
+        }
+
         const { data, error } = await supabase
             .from("pasien")
-            .select("*")
+            .select(`
+                id,
+                nama_pasien,
+                email,
+                tanggal_lahir,
+                jenis_kelamin,
+                no_telepon,
+                alamat,
+                kategori_pasien,
+                kebutuhan_khusus
+            `)
             .eq("id", id)
-            .single();
+            .maybeSingle();
 
-        if (error) {
-            if (error.code === "PGRST116") {
-                return res.status(404).json({
-                    message: "Pasien tidak ditemukan"
-                });
-            }
-            throw error;
+        if (error) throw error;
+
+        if (!data) {
+            return res.status(404).json({
+                message: "Pasien tidak ditemukan"
+            });
         }
 
         res.status(200).json({
@@ -52,6 +71,7 @@ const getPasienById = async (req, res) => {
         });
     }
 };
+
 
 const createPasien = async (req, res) => {
     try {
@@ -99,15 +119,63 @@ const createPasien = async (req, res) => {
     }
 };
 
+
 const updatePasien = async (req, res) => {
     try {
         const { id } = req.params;
 
+        // Pasien hanya boleh mengubah profil sendiri
+        if (
+            req.admin.role === "pasien" &&
+            String(req.admin.id) !== String(id)
+        ) {
+            return res.status(403).json({
+                message: "Akses ditolak. Kamu hanya dapat mengubah data milik sendiri."
+            });
+        }
+
+        const {
+            nama_pasien,
+            tanggal_lahir,
+            jenis_kelamin,
+            no_telepon,
+            alamat,
+            kategori_pasien,
+            kebutuhan_khusus
+        } = req.body;
+
+        const updateData = {
+            nama_pasien,
+            tanggal_lahir,
+            jenis_kelamin,
+            no_telepon,
+            alamat,
+            kategori_pasien,
+            kebutuhan_khusus
+        };
+
+        // Hilangkan field yang tidak dikirim
+        Object.keys(updateData).forEach((key) => {
+            if (updateData[key] === undefined) {
+                delete updateData[key];
+            }
+        });
+
         const { data, error } = await supabase
             .from("pasien")
-            .update(req.body)
+            .update(updateData)
             .eq("id", id)
-            .select()
+            .select(`
+                id,
+                nama_pasien,
+                email,
+                tanggal_lahir,
+                jenis_kelamin,
+                no_telepon,
+                alamat,
+                kategori_pasien,
+                kebutuhan_khusus
+            `)
             .maybeSingle();
 
         if (error) throw error;
@@ -129,6 +197,7 @@ const updatePasien = async (req, res) => {
         });
     }
 };
+
 
 const deletePasien = async (req, res) => {
     try {
