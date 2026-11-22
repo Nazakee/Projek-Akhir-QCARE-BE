@@ -197,4 +197,4 @@ http://localhost:3000
 | Method | Endpoint | Keterangan |
 |---|---|---|
 | GET | `/api/fasilitas` | Mengambil seluruh fasilitas |
-| GET | `/api
+| GET | `/api/fasilitas/id` | Mengambil fasilitas berdasarkan ID |
