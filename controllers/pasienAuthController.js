@@ -2,6 +2,8 @@
 const supabase = require("../config/supabase");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const { OAuth2Client } = require("google-auth-library");
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 const registerPasien = async (req, res) => {
     try {
@@ -82,8 +84,6 @@ const registerPasien = async (req, res) => {
         });
     }
 };
-
-
 // Login pasien
 const loginPasien = async (req, res) => {
     try {
@@ -103,7 +103,7 @@ const loginPasien = async (req, res) => {
 
         if (error) throw error;
 
-        if (!pasien) {
+        if (!pasien || !pasien.password_hash) {
             return res.status(401).json({
                 message: "Email atau password salah"
             });
@@ -152,7 +152,159 @@ const loginPasien = async (req, res) => {
     }
 };
 
+// Login atau registrasi otomatis menggunakan Google
+const googleLogin = async (req, res) => {
+    try {
+        const { idToken } = req.body;
+
+        if (!idToken || typeof idToken !== "string") {
+            return res.status(400).json({
+                message: "Google ID Token wajib dikirim"
+            });
+        }
+
+        if (!process.env.GOOGLE_CLIENT_ID) {
+            return res.status(500).json({
+                message: "Konfigurasi Google Login belum tersedia"
+            });
+        }
+
+        // Verifikasi Google ID Token
+        let payload;
+
+        try {
+            const ticket = await googleClient.verifyIdToken({
+                idToken,
+                audience: process.env.GOOGLE_CLIENT_ID
+            });
+
+            payload = ticket.getPayload();
+        } catch (error) {
+            return res.status(401).json({
+                message: "Google ID Token tidak valid"
+            });
+        }
+
+        if (
+            !payload ||
+            !payload.sub ||
+            !payload.email ||
+            payload.email_verified !== true
+        ) {
+            return res.status(401).json({
+                message: "Akun Google tidak valid atau email belum terverifikasi"
+            });
+        }
+
+        const email = payload.email.trim().toLowerCase();
+
+        const namaPasien = (
+            payload.name ||
+            payload.given_name ||
+            email.split("@")[0]
+        ).trim().slice(0, 100);
+
+        // Cegah akun admin menggunakan Google Login pasien
+        const { data: existingAdmin, error: adminError } =
+            await supabase
+                .from("admin")
+                .select("id")
+                .ilike("email", email)
+                .maybeSingle();
+
+        if (adminError) throw adminError;
+
+        if (existingAdmin) {
+            return res.status(403).json({
+                message: "Akun admin tidak dapat menggunakan Google Login pasien"
+            });
+        }
+
+        // Cari pasien berdasarkan email Google
+        const { data: existingPasien, error: pasienError } =
+            await supabase
+                .from("pasien")
+                .select("id, nama_pasien, email, kategori_pasien")
+                .ilike("email", email)
+                .maybeSingle();
+
+        if (pasienError) throw pasienError;
+
+        let pasien = existingPasien;
+
+        // Buat akun otomatis jika email belum terdaftar
+        if (!pasien) {
+            const { data: newPasien, error: insertError } =
+                await supabase
+                    .from("pasien")
+                    .insert([{
+                        nama_pasien: namaPasien,
+                        email,
+                        password_hash: null,
+                        kategori_pasien: "Umum"
+                    }])
+                    .select("id, nama_pasien, email, kategori_pasien")
+                    .single();
+
+            if (insertError) {
+                // Tangani jika email terdaftar bersamaan
+                if (insertError.code === "23505") {
+                    const { data: registeredPasien, error: retryError } =
+                        await supabase
+                            .from("pasien")
+                            .select("id, nama_pasien, email, kategori_pasien")
+                            .ilike("email", email)
+                            .maybeSingle();
+
+                    if (retryError) throw retryError;
+                    if (!registeredPasien) throw insertError;
+
+                    pasien = registeredPasien;
+                } else {
+                    throw insertError;
+                }
+            } else {
+                pasien = newPasien;
+            }
+        }
+
+        // Buat JWT dengan format yang sama seperti login biasa
+        const token = jwt.sign(
+            {
+                id: pasien.id,
+                email: pasien.email,
+                role: "pasien"
+            },
+            process.env.JWT_SECRET,
+            {
+                expiresIn: process.env.JWT_EXPIRES_IN || "1d"
+            }
+        );
+
+        return res.status(200).json({
+            message: existingPasien
+                ? "Login Google berhasil"
+                : "Registrasi dan login Google berhasil",
+            data: {
+                id: pasien.id,
+                nama_pasien: pasien.nama_pasien,
+                email: pasien.email,
+                kategori_pasien: pasien.kategori_pasien,
+                role: "pasien"
+            },
+            token
+        });
+
+    } catch (error) {
+        console.error("Google Login error:", error.message);
+
+        return res.status(500).json({
+            message: "Terjadi kesalahan pada server"
+        });
+    }
+};
 module.exports = {
     registerPasien,
-    loginPasien
+    loginPasien,
+    googleLogin
 };
